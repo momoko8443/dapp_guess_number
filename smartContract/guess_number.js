@@ -45,7 +45,7 @@ GuessNumberGame.prototype = {
             status: this.game.get('status'),
             currentNumber:this.game.get('currentNumber'),
             records: this.game.get('records'),
-            targetNumber: this.game.get('targetNumber'),
+            //targetNumber: this.game.get('targetNumber'),
             answer: this.game.get('answer')
         }
         return game;

@@ -142,7 +142,7 @@
                 listener: function (resp) {
                     var game = JSON.parse(resp.result);
                     self.currentNumber = game.currentNumber;
-                    self.targetNumber = game.targetNumber;
+                    //self.targetNumber = game.targetNumber;
                     self.records = game.records.reverse();
                     self.answer = game.answer;
                     gameStatus = game.status;
@@ -157,7 +157,7 @@
         }
 
         function gameOver(game) {
-            if (game.targetNumber === game.currentNumber) {
+            if (game.answer === game.currentNumber) {
                 self.winner = game.records[game.records.length - 1].from;
             }
             //clearInterval(timer);
