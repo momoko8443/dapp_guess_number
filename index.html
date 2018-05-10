@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Dapp">
+    <title>Nebulas DApp</title>
+    <link href="lib/css/main.css" rel="stylesheet">
+    <link href="lib/css/modal.css" rel="stylesheet">
+    <!--<![endif]-->
+    <script src="lib/js/nebpay/nebPay.js"></script>
+    <script src="lib/js/ukulelejs/dist/uku.js"></script>
+</head>
+
+<body uku-application>
+    <div class="main box">
+        <div class="header box">
+            <h2 class="header-text">大家猜数字</h2>
+            <p>
+                游戏规则: 合约会随机生成一个1-99的正整数，玩家们可以每次增加1-5来逼近这个正整数,最先猜对的玩家获胜,若最后一次猜想大于这个数字则游戏结束
+            </p>
+        </div>
+
+        <div class="content box">
+            <div style="max-height: 150px; overflow: auto;">
+                <ol>
+                    <li uku-repeat="re in appCtrl.records">
+                        {{re.from + ' 刚才加了 ' + re.step}}
+                    </li>
+                </ol>
+            </div>
+            <p class="small-text" uku-render="appCtrl.showInstallWalletExtMessage">
+                注意: 请安装
+                <a target="_blank" href="https://github.com/ChengOrangeJu/WebExtensionWallet">WebExtensionWallet</a> 来使用本DApp
+            </p>
+            <h1 class="splash-head">{{appCtrl.targetNumber}}</h1>
+            <h1 class="big-number">{{appCtrl.currentNumber}}</h1>
+            <p class="small-text">
+                {{ "当前数字是 " + appCtrl.currentNumber +", 请加入你的猜想" }}
+            </p>
+            <input type="range" min="1" max="5" uku-value="appCtrl.increment">
+            <h3 class="small-text">
+                {{ "+" + appCtrl.increment}}
+            </h3>
+            <p>
+                <a class="primary-button" class="pure-button pure-button-primary" uku-onclick="appCtrl.add()">增加</a>
+            </p>
+        </div>
+    </div>
+    <!-- <div class="footer l-box is-center">
+        View the source of this layout to learn more. Made with love by the YUI Team.
+    </div> -->
+    <div id="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>游戏结束</h2>
+            </div>
+            <div class="copy">
+                <p class="small-text" uku-render="appCtrl.winner ? true : false ">{{"恭喜! " + appCtrl.winner + " 猜中数字"}}</p>
+                <p class="small-text" uku-render="appCtrl.winner ? false : true ">很遗憾， 没有人猜对数字</p>
+                <h1 class="big-number">{{appCtrl.answer}}</h1>
+            </div>
+            <div class="cf footer">
+                输入初始值，并新开一局
+                <input type="range" min="1" max="5" uku-value="appCtrl.newincrement">
+                <span style="font-size: 120%;">
+                    {{ appCtrl.newincrement}}
+                </span>
+                <a class="primary-button" style="margin-left: 30px" class="pure-button pure-button-primary" uku-onclick="appCtrl.restart()">开局</a>
+                <a href="#" class="primary-button">关闭</a>
+            </div>
+        </div>
+        <div class="overlay"></div>
+    </div>
+</body>
+<script>
+    var NebPay = require("nebpay"); //https://github.com/nebulasio/nebPay
+    var nebPay = new NebPay();
+    var dappAddress = 'n1z9T1ouUDEdaeVWvu3Y8QsAQJnQ1v7zzjb';
+    var to = dappAddress;
+    var uku = new Ukulele();
+    var appCtrl = new ApplicationController(uku);
+    uku.registerController('appCtrl', appCtrl);
+    uku.init();
+    uku.addListener(Ukulele.INITIALIZED, function () {
+        appCtrl.init();
+    });
+
+    function ApplicationController(uku) {
+        var self = this;
+        var gameStatus = 1;
+        var timer;
+        this.init = function () {
+            if (typeof (webExtensionWallet) !== "undefined") {
+                this.showInstallWalletExtMessage = false;
+            }
+            fetchGameStatus();
+            timer = setInterval(function () {
+                fetchGameStatus();
+            }, 15000);
+        };
+
+        this.restart = function() {
+            if(gameStatus === 0){
+                var to = dappAddress;
+                var value = "0";
+                var callFunction = "restart";
+                var callArgs = JSON.stringify([this.newincrement]);
+                nebPay.call(to, value, callFunction, callArgs, { //使用nebpay的simulateCall接口去执行get查询, 模拟执行.不发送交易,不上链
+                    listener: function (resp) {
+                        //fetchGameStatus();
+                    }
+                });
+            }
+        };
+
+        this.add = function () {
+            var to = dappAddress;
+            var value = "0";
+            var callFunction = "add";
+            var callArgs = JSON.stringify([this.increment]);
+            nebPay.call(to, value, callFunction, callArgs, { //使用nebpay的simulateCall接口去执行get查询, 模拟执行.不发送交易,不上链
+                listener: function (resp) {
+                    //fetchGameStatus();
+                }
+            });
+        };
+        this.increment = 1;
+        this.newincrement = 1;
+        this.currentNumber = 0;
+        this.records = [];
+        this.showInstallWalletExtMessage = true;
+        
+
+        function fetchGameStatus() {
+            var to = dappAddress;
+            var value = "0";
+            var callFunction = "get";
+            var callArgs;
+            nebPay.simulateCall(to, value, callFunction, callArgs, { //使用nebpay的simulateCall接口去执行get查询, 模拟执行.不发送交易,不上链
+                listener: function (resp) {
+                    var game = JSON.parse(resp.result);
+                    self.currentNumber = game.currentNumber;
+                    self.targetNumber = game.targetNumber;
+                    self.records = game.records.reverse();
+                    self.answer = game.answer;
+                    gameStatus = game.status;
+                    if (gameStatus === 0) {
+                        gameOver(game);
+                    }else if(window.location.hash === '#modal'){
+                        window.location.hash = '#';
+                    }
+                    uku.refresh('appCtrl');
+                }
+            });
+        }
+
+        function gameOver(game) {
+            if (game.targetNumber === game.currentNumber) {
+                self.winner = game.records[game.records.length - 1].from;
+            }
+            //clearInterval(timer);
+            window.location.hash = '#modal';
+        }
+
+    }
+</script>
+
+</html>
